@@ -1,17 +1,36 @@
-import { secToTime, timeDifference } from '@/helpers/functions.js'
+import { createCDragonAssetUrl, secToTime, timeDifference } from '@/helpers/functions.js'
 import { maps, gameModes } from '@/data/data.js'
-import summonerSpells from '@/data/summonerSpells.json'
+import store from '@/store'
 
 const leaguesNumbers = { 'I': 1, 'II': 2, 'III': 3, 'IV': 4 }
 
 /**
- * Return all the infos about a list of matches built with the Riot API data
- * @param {Object} RiotData : all data from the Riot API
+ * Get the url of the of the player primary rune
+ * @param {Object} perks : from the API
+ */
+export function getPrimarRune(perks) {
+  const primaryRune = perks.selected.length ? store.state.cdragon.runes.perks[perks.selected[0]] : null
+  return primaryRune ? createCDragonAssetUrl(primaryRune.icon) : null
+}
+
+/**
+ * Get the url of the of the player secondary rune
+ * @param {Object} perks : from the API
+ */
+export function getSecondaryRune(perks) {
+  const secondaryRune = store.state.cdragon.runes.perkstyles[perks.secondaryStyle]
+  return  secondaryRune ? createCDragonAssetUrl(secondaryRune.icon) : null
+}
+
+/**
+ * Return all the infos about a list of matches built with the api data
+ * @param {Object} matches : all data from the api matches endpoint
  */
 export function createMatchData(matches) {
   for (const match of matches) {
-    match.firstSum = getSummonerLink(match.firstSum)
-    match.secondSum = getSummonerLink(match.secondSum)
+    // Runes
+    match.primaryRune = getPrimarRune(match.perks)
+    match.secondaryRune = getSecondaryRune(match.perks)
 
     const date = new Date(match.date)
     const dateOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }
@@ -24,29 +43,29 @@ export function createMatchData(matches) {
     if (!match.gamemode) {
       match.gamemode = { name: 'Unknown gamemode' }
     }
-  } // end loop matches
+  }
 
   return matches
 }
 
 /**
- * Return the basic infos about a summoner built with the Riot API data
- * @param {Object} RiotData : all data from the Riot API
+ * Return the formatted basic info for a summoner
+ * @param {Object} summonerBasic : all data from the api basic endpoint
  */
-export function createBasicSummonerData(RiotData) {
+export function createBasicSummonerData(summonerBasic) {
   // Ranked Stats
-  RiotData.ranked.soloQ = getLeagueData(RiotData.ranked.soloQ, 'Solo/Duo')
-  if (!RiotData.ranked.soloQ) delete RiotData.ranked.soloQ
+  summonerBasic.ranked.soloQ = getLeagueData(summonerBasic.ranked.soloQ, 'Solo/Duo')
+  if (!summonerBasic.ranked.soloQ) delete summonerBasic.ranked.soloQ
 
-  RiotData.ranked.flex5v5 = getLeagueData(RiotData.ranked.flex5v5, 'Flex 5vs5')
-  if (!RiotData.ranked.flex5v5) delete RiotData.ranked.flex5v5
+  summonerBasic.ranked.flex5v5 = getLeagueData(summonerBasic.ranked.flex5v5, 'Flex 5vs5')
+  if (!summonerBasic.ranked.flex5v5) delete summonerBasic.ranked.flex5v5
 
-  RiotData.ranked.flex3v3 = getLeagueData(RiotData.ranked.flex3v3, 'Flex 3vs3')
-  if (!RiotData.ranked.flex3v3) delete RiotData.ranked.flex3v3
+  summonerBasic.ranked.flex3v3 = getLeagueData(summonerBasic.ranked.flex3v3, 'Flex 3vs3')
+  if (!summonerBasic.ranked.flex3v3) delete summonerBasic.ranked.flex3v3
 
   // If Summoner is Unranked
-  if (Object.entries(RiotData.ranked).length === 0) {
-    RiotData.ranked.soloQ = {
+  if (Object.entries(summonerBasic.ranked).length === 0) {
+    summonerBasic.ranked.soloQ = {
       fullRank: 'Unranked',
       rankImgLink: 'https://res.cloudinary.com/kln/image/upload/v1571671133/ranks/unranked.png',
       leaguePoints: 0,
@@ -57,30 +76,36 @@ export function createBasicSummonerData(RiotData) {
     }
   }
 
-  return RiotData
+  return summonerBasic
 }
 
 /**
  * Return the formatted records of a summoner
- * @param {Object} records : raw records from the database stats
+ * @param {Object} recordsDto : raw records from the database stats
  */
-export function createRecordsData(records) {
-  records.maxTime.time = secToTime(records.maxTime.time)
-  records.maxGold.gold = records.maxGold.gold.toLocaleString()
-  records.maxDmgTaken.dmgTaken = records.maxDmgTaken.dmgTaken.toLocaleString()
-  records.maxDmgChamp.dmgChamp = records.maxDmgChamp.dmgChamp.toLocaleString()
-  records.maxDmgObj.dmgObj = records.maxDmgObj.dmgObj.toLocaleString()
-  records.maxKp.kp = `${records.maxKp.kp}%`
+export function createRecordsData(recordsDto) {
+  const records = recordsDto.reduce((acc, record) => {
+    acc[record.what] = record
+    return acc
+  }, {})
 
-  // New record fields
-  if (records.maxLiving) {
-    records.maxLiving.longestLiving = secToTime(records.maxLiving.longestLiving)
-    records.maxHeal.heal = records.maxHeal.heal.toLocaleString()
-  }
+  records.game_duration.amount = secToTime(records.game_duration.amount)
+  records.gold.amount =  records.gold.amount.toLocaleString()
+  records.damage_taken.amount = records.damage_taken.amount.toLocaleString()
+  records.damage_dealt_champions.amount = records.damage_dealt_champions.amount.toLocaleString()
+  records.damage_dealt_objectives.amount = records.damage_dealt_objectives.amount.toLocaleString()
+  records.kp.amount = `${records.kp.amount}%`
+  records.time_spent_living.amount = secToTime(records.time_spent_living.amount)
+  records.heal.amount = records.heal.amount.toLocaleString()
 
   return records
 }
 
+/**
+ * Add rank img and ranked data
+ * @param {Object} leagueData 
+ * @param {String} leagueName 
+ */
 function getLeagueData(leagueData, leagueName) {
   if (!leagueData) return null
 
@@ -95,10 +120,4 @@ function getLeagueData(leagueData, leagueName) {
  */
 export function getRankImg(leagueData) {
   return `https://res.cloudinary.com/kln/image/upload/v1571671133/ranks/${leagueData.tier}_${leaguesNumbers[leagueData.rank]}.png`
-}
-
-export function getSummonerLink(id) {
-  if (id === 0) return null
-  const spellName = summonerSpells.find(s => s.id === id).iconPath.split('/assets/')[1].toLowerCase()
-  return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/${spellName}`
 }

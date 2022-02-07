@@ -115,9 +115,9 @@
       </ul>
       <template v-if="leagueStatsByType('Ranked').length">
         <div class="flex items-baseline px-4 mt-3 text-xs font-semibold text-blue-300 uppercase">
-          <div class="w-2/4 text-base text-left text-blue-400">Ranked</div>
-          <div class="w-1/4">Winrate</div>
-          <div class="w-1/4">Record</div>
+          <div class="w-5/12 text-base text-left text-blue-400">Ranked</div>
+          <div class="w-3/12">Winrate</div>
+          <div class="w-4/12">Record</div>
         </div>
         <ul class="mt-1 text-gray-100">
           <li
@@ -126,12 +126,12 @@
             :class="{'bg-blue-760': index % 2 !== 0}"
             class="flex items-center justify-between px-4 py-1 leading-tight"
           >
-            <div class="w-2/4 text-left capitalize">{{ league.name.toLowerCase() }}</div>
+            <div class="w-5/12 text-left capitalize">{{ league.name.toLowerCase() }}</div>
             <div
               :class="calculateWinrate(league.wins, league.count).color"
-              class="w-1/4"
+              class="w-3/12"
             >{{ calculateWinrate(league.wins, league.count).winrate|percent }}</div>
-            <div class="w-1/4">
+            <div class="w-4/12">
               <span
                 :class="winLossColor(league.wins, league.losses).win"
                 class="font-semibold"
@@ -147,9 +147,9 @@
       </template>
       <template v-if="leagueStatsByType('Normal').length">
         <div class="flex items-baseline px-4 mt-3 text-xs font-semibold text-blue-300 uppercase">
-          <div class="w-2/4 text-base text-left text-blue-400">Normal</div>
-          <div class="w-1/4">Winrate</div>
-          <div class="w-1/4">Record</div>
+          <div class="w-5/12 text-base text-left text-blue-400">Normal</div>
+          <div class="w-3/12">Winrate</div>
+          <div class="w-4/12">Record</div>
         </div>
         <ul class="mt-1 text-gray-100">
           <li
@@ -158,12 +158,12 @@
             :class="{'bg-blue-760': index % 2 !== 0}"
             class="flex items-center justify-between px-4 py-1 leading-tight"
           >
-            <div class="w-2/4 text-left capitalize">{{ league.name.toLowerCase() }}</div>
+            <div class="w-5/12 text-left capitalize">{{ league.name.toLowerCase() }}</div>
             <div
               :class="calculateWinrate(league.wins, league.count).color"
-              class="w-1/4"
+              class="w-3/12"
             >{{ calculateWinrate(league.wins, league.count).winrate|percent }}</div>
-            <div class="w-1/4">
+            <div class="w-4/12">
               <span
                 :class="winLossColor(league.wins, league.losses).win"
                 class="font-semibold"
@@ -179,23 +179,23 @@
       </template>
 
       <div class="flex items-baseline px-4 mt-3 text-xs font-semibold text-blue-300 uppercase">
-        <div class="w-2/4 text-base text-left text-blue-400">Class</div>
-        <div class="w-1/4">Winrate</div>
-        <div class="w-1/4">Record</div>
+        <div class="w-5/12 text-base text-left text-blue-400">Class</div>
+        <div class="w-3/12">Winrate</div>
+        <div class="w-4/12">Record</div>
       </div>
       <ul class="mt-1 text-gray-100">
         <li
-          v-for="(championClass, index) in championClasses"
+          v-for="(championClass, index) in stats.class"
           :key="index"
           :class="{'bg-blue-760': index % 2 !== 0}"
           class="flex items-center justify-between px-4 py-1 leading-tight"
         >
-          <div class="w-2/4 text-left capitalize">{{ championClass._id }}</div>
+          <div class="w-5/12 text-left capitalize">{{ championClass.id }}</div>
           <div
             :class="calculateWinrate(championClass.wins, championClass.count).color"
-            class="w-1/4"
+            class="w-3/12"
           >{{ calculateWinrate(championClass.wins, championClass.count).winrate|percent }}</div>
-          <div class="w-1/4">
+          <div class="w-4/12">
             <span
               :class="winLossColor(championClass.wins, championClass.losses).win"
               class="font-semibold"
@@ -241,16 +241,12 @@ export default {
   },
 
   computed: {
-    championClasses() {
-      const classes = [...this.stats.class]
-      return classes.sort((a, b) => b.count - a.count)
-    },
     mostPlayedRole() {
       return Math.max(...this.stats.role.map(r => r.count), 0)
     },
     globalStatsKeys() {
       // eslint-disable-next-line no-unused-vars
-      const { _id, wins, losses, count, time, kp, ...rest } = this.stats.global
+      const { id, wins, losses, count, time, kp, ...rest } = this.stats.global
       return rest
     },
     ...mapState({
@@ -270,10 +266,9 @@ export default {
     leagueStatsByType(typeName) {
       return this.stats.league
         .map(l => {
-          return { ...l, ...gameModes[l._id] }
+          return { ...l, ...gameModes[l.id] }
         })
         .filter(l => l.type === typeName)
-        .sort((a, b) => b.count - a.count)
     },
     roundedRoleLosses(win, count) {
       return win === count ? 'rounded-full' : 'rounded-b-full'

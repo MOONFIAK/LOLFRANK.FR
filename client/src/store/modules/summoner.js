@@ -7,24 +7,26 @@ export const state = {
   basic: {
     account: {},
     currentSeason: null,
-    matchList: [],
     ranked: {},
+    recentActivity: [],
     seasons: [],
+    gamemodes: [],
     status: '',
   },
   overview: {
-    matchIndex: 0,
+    NB_LOAD_GAMES: 10,
     matches: [],
     stats: {},
     loaded: false,
     matchesLoading: false,
+    moreMatchesToFetch: true
   },
   champions: {
     list: [],
     championsLoaded: false
   },
   records: {
-    list: [],
+    list: {},
     recordsLoaded: false
   },
   live: {
@@ -41,6 +43,7 @@ export const mutations = {
     state.champions.championsLoaded = false
     state.records.recordsLoaded = false
     state.overview.loaded = false
+    state.overview.moreMatchesToFetch = true
     state.live.liveLoaded = false
   },
   CHAMPIONS_NOT_FOUND(state) {
@@ -51,7 +54,6 @@ export const mutations = {
     state.champions.championsLoaded = true
   },
   KEEP_LAST_X_MATCHES(state, number) {
-    state.overview.matchIndex = number
     state.overview.matches = state.overview.matches.slice(0, number)
   },
   LIVE_FOUND(state, { live }) {
@@ -67,17 +69,24 @@ export const mutations = {
   },
   MATCHES_FOUND(state, { newMatches, stats }) {
     state.overview.matchesLoading = false
-    state.overview.matches = [...state.overview.matches, ...newMatches]
-    state.overview.matchIndex += newMatches.length
-    state.overview.stats = stats
-    state.champions.championsLoaded = false
-    state.records.recordsLoaded = false
+
+    if (newMatches.length > 0) {
+      state.basic.recentActivity = stats.recentActivity
+      state.overview.matches = [...state.overview.matches, ...newMatches]
+      state.overview.stats = stats
+      state.champions.championsLoaded = false
+      state.records.recordsLoaded = false
+    }
+
+    state.overview.moreMatchesToFetch = newMatches.length >= state.overview.NB_LOAD_GAMES - 1
   },
   OVERVIEW_FOUND(state, infos) {
+    state.basic.recentActivity = infos.stats.recentActivity
     state.overview.matches = infos.matches
-    state.overview.matchIndex = infos.matches.length
     state.overview.stats = infos.stats
     state.overview.loaded = true
+    state.records.recordsLoaded = false
+    state.overview.moreMatchesToFetch = infos.matches.length >= state.overview.NB_LOAD_GAMES - 1
   },
   RECORDS_FOUND(state, { records }) {
     state.records.list = records
@@ -85,9 +94,10 @@ export const mutations = {
   },
   SUMMONER_FOUND(state, infos) {
     state.basic.account = infos.account
-    state.basic.matchList = infos.matchList
     state.basic.ranked = infos.ranked
+    state.basic.recentActivity = infos.recentActivity
     state.basic.seasons = infos.seasons.sort((a, b) => b - a)
+    state.basic.gamemodes = infos.gamemodes
     state.basic.status = 'found'
     state.live.match = infos.current
     state.live.playing = infos.playing
@@ -175,20 +185,18 @@ export const actions = {
       commit('SUMMONER_NOT_PLAYING')
     }
   },
-  async moreMatches({ commit, getters, rootState }) {
+  async moreMatches({ commit, rootState }) {
     commit('MATCHES_LOADING')
 
-    const gameIds = getters.filteredMatchList
-      .slice(state.overview.matchIndex, state.overview.matchIndex + 10)
-      .map(({ gameId }) => gameId)
+    if (!state.overview.matches.length) return
+    const lastMatchId = state.overview.matches[state.overview.matches.length - 1].matchId
 
     const resp = await axios(({
       url: 'match',
       data: {
         puuid: state.basic.account.puuid,
-        accountId: state.basic.account.accountId,
         region: rootState.regionsList[rootState.settings.region],
-        gameIds
+        lastMatchId
       },
       method: 'POST'
     })).catch(() => { })
@@ -216,7 +224,7 @@ export const actions = {
     const resp = await axios(({ url: 'summoner/records', data: { puuid: state.basic.account.puuid }, method: 'POST' })).catch(() => { })
     console.log('---RECORDS---')
     console.log(resp.data)
-    const records = resp.data ? createRecordsData(resp.data) : {}
+    const records = resp.data.length ? createRecordsData(resp.data) : {}
 
     commit('RECORDS_FOUND', { records })
   },
@@ -229,14 +237,7 @@ export const actions = {
 }
 
 export const getters = {
-  filteredMatchList: (state, getters) => {
-    return state.basic.matchList
-      .filter(match => !getters.regionFilterApplied || match.seasonMatch === state.basic.currentSeason)
-  },
   matchesLoading: state => state.overview.matchesLoading,
-  moreMatchesToFetch: (state, getters) => {
-    return state.overview.matchIndex < getters.filteredMatchList.length
-  },
   overviewLoaded: state => state.overview.loaded,
   playing: state => state.live.playing,
   regionFilterApplied: state => !!state.basic.currentSeason,

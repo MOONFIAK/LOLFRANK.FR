@@ -24,20 +24,22 @@
         >
           <td class="py-1 pl-2 rounded-l-lg">
             <div class="flex items-center">
-              <div 
+              <div
+                v-if="player.perks"
                 @click="selectRunes(player)"
                 :class="{ 'cursor-pointer': player.perks }"
                 class="flex flex-col items-center runes"
               >
                 <div
-                  :style="{backgroundImage: `url('${player.runes.primaryRune}')`}"
+                  :style="{backgroundImage: `url('${getPrimarRune(player.perks)}')`}"
                   class="w-6 h-6 bg-center bg-cover"
                 ></div>
                 <div
-                  :style="{backgroundImage: `url('${player.runes.secondaryRune}')`}"
+                  :style="{backgroundImage: `url('${getSecondaryRune(player.perks)}')`}"
                   class="w-3 h-3 mt-1 bg-center bg-cover"
                 ></div>
               </div>
+              <div v-else class="w-6"></div>
               <div
                 :style="{backgroundImage: `url('https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${player.championId}.png')`}"
                 :class="borderChampion(player.summonerId)"
@@ -57,11 +59,11 @@
               </div>
               <div class="flex flex-col ml-2">
                 <div
-                  :style="{backgroundImage: `url(${getSummonerLink(player.spell1Id)})`}"
+                  :style="{backgroundImage: `url(${player.summonerSpell1.icon})`}"
                   class="w-4 h-4 bg-center bg-cover rounded-md bg-blue-1000"
                 ></div>
                 <div
-                  :style="{backgroundImage: `url(${getSummonerLink(player.spell2Id)})`}"
+                  :style="{backgroundImage: `url(${player.summonerSpell2.icon})`}"
                   class="w-4 h-4 mt-1 bg-center bg-cover rounded-md bg-blue-1000"
                 ></div>
               </div>
@@ -72,7 +74,11 @@
                   :class="[player.summonerId === account.id ? 'text-yellow-500' : 'hover:text-blue-200']"
                   class="font-semibold"
                 >{{ player.summonerName }}</router-link>
-                <div class="text-xs">Level {{ player.level }}</div>
+                <div
+                  :class="[ally ? 'text-teal-300 ' : 'text-red-400 ']"
+                  class="text-xs"
+                >{{ player.champion.name }}
+                </div>
               </div>
             </div>
           </td>
@@ -185,7 +191,7 @@
 
 <script>
 import { mapActions, mapState } from 'vuex'
-import { getSummonerLink } from '@/helpers/summoner.js'
+import { getPrimarRune, getSecondaryRune } from '@/helpers/summoner.js'
 import { ContentLoader } from 'vue-content-loader'
 
 export default {
@@ -264,17 +270,12 @@ export default {
       }
     },
     selectRunes(player) {
-      if(!player.perks) {
+      if(!player.perks)
         return
-      }
-      
-      this.displayOrHideRunes({
-        primaryStyle: player.perks.perkStyle,
-        secondaryStyle: player.perks.perkSubStyle,
-        selected: player.perks.perkIds
-      })
+      this.displayOrHideRunes(player.perks)
     },
-    getSummonerLink,
+    getPrimarRune,
+    getSecondaryRune,
      ...mapActions('cdragon', ['displayOrHideRunes']),
   }
 }

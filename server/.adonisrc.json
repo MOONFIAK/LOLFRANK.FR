@@ -2,28 +2,39 @@
   "typescript": true,
   "commands": [
     "./commands",
-    "@adonisjs/core/build/commands",
-    "@zakodium/adonis-mongodb/lib/commands"
+    "@adonisjs/core/build/commands/index.js",
+    "@adonisjs/repl/build/commands",
+    "@adonisjs/lucid/build/commands",
+    "@rocketseat/adonis-bull/build/commands"
   ],
   "exceptionHandlerNamespace": "App/Exceptions/Handler",
   "aliases": {
     "App": "app",
-    "Contracts": "contracts",
     "Config": "config",
-    "Database": "database"
+    "Database": "database",
+    "Contracts": "contracts"
   },
   "preloads": [
     "./start/routes",
-    "./start/kernel"
+    "./start/kernel",
+    {
+      "file": "./start/events",
+      "environment": [
+        "console",
+        "repl",
+        "web"
+      ]
+    },
+    "./start/bull"
   ],
   "providers": [
     "./providers/AppProvider",
     "@adonisjs/core",
-    "@zakodium/adonis-mongodb",
-    "@adonisjs/redis"
+    "@adonisjs/lucid",
+    "@adonisjs/redis",
+    "@rocketseat/adonis-bull"
   ],
-  "metaFiles": [
-    ".env",
-    ".adonisrc.json"
+  "aceProviders": [
+    "@adonisjs/repl"
   ]
 }
